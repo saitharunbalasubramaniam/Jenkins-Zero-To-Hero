@@ -18,7 +18,9 @@ pipeline {
       steps {
         sh 'ls -ltr'
         // build the project and create a JAR file
-        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'
+        sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn clean package'  //mvn clean - 	Deletes old build files from target/
+                                                                                      //mvn package	- Compiles the code, runs tests, and creates a .jar/.war file
+                                                                                      // A JAR file (Java ARchive) is created because it packages all compiled Java code, resources, and dependencies into a single file that can be easily executed or deployed
       }
     }
     stage('Static Code Analysis') {
@@ -33,15 +35,18 @@ pipeline {
     }
     stage('Build and Push Docker Image') {
       environment {
-        DOCKER_IMAGE = "saitharun15/cicd:${BUILD_NUMBER}"
+        DOCKER_IMAGE = "saitharun15/cicd:${BUILD_NUMBER}"    // ${BUILD_NUMBER} -  ex. DOCKER_IMAGE = "saitharun15/cicd:5"  . 
+                                                                                    //✅ Creates unique image versions to avoid overwriting old ones
+                                                                                    //✅ Tracks which build created which image
+                                                                                    //✅ Useful for rollback
         // DOCKERFILE_LOCATION = "java-maven-sonar-argocd-helm-k8s/spring-boot-app/Dockerfile"
         REGISTRY_CREDENTIALS = credentials('docker-cred')
       }
       steps {
         script {
-            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'
-            def dockerImage = docker.image("${DOCKER_IMAGE}")
-            docker.withRegistry('https://index.docker.io/v1/', "docker-cred") {
+            sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && docker build -t ${DOCKER_IMAGE} .'     // t flag - the image has name and tag
+            def dockerImage = docker.image("${DOCKER_IMAGE}")                                               // def  - in groovy way to define variable, storing image in varible
+            docker.withRegistry('https://index.docker.io/v1/', "docker-cred") {                              // Building a Docker image from a Spring Boot application.  -> Logging into Docker Hub using Jenkins credentials (docker-cred).  -> Pushing the built image to Docker Hub.                                                                                                   
                 dockerImage.push()
             }
         }
